@@ -1,0 +1,40 @@
+name: PartsUnlimitedFlexInternational/PartsUnlimitedFlexInternational-ASP.NET_Core-CI
+on:
+  push:
+    branches:
+    - master
+env:
+  BuildConfiguration: Release
+  BuildPlatform: any cpu
+  Parameters_RestoreBuildProjects: "**/*.csproj"
+  Parameters_TestProjects: "**/*[Tt]ests/*.csproj"
+  system_debug: 'false'
+jobs:
+  Job_1:
+    name: Agent job 1
+    runs-on:
+      - self-hosted
+      - ubuntu latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.1.0
+    - name: Restore
+      run: dotnet restore ${{ env.Parameters_RestoreBuildProjects }} --verbosity "Normal"
+    - name: Build
+      run: dotnet build ${{ env.Parameters_RestoreBuildProjects }} --configuration ${{ env.BuildConfiguration }}
+    - name: Test
+      run: dotnet test ${{ env.Parameters_TestProjects }} --logger trx --results-directory "${{ runner.temp }}" --configuration ${{ env.BuildConfiguration }}
+    - name: Test
+      uses: NasAmin/trx-parser@v0.5.0
+      if: always()
+      with:
+        TRX_PATH: "${{ runner.temp }}"
+        REPO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    - name: Publish
+      run: dotnet publish ${{ env.Parameters_RestoreBuildProjects }} --configuration ${{ env.BuildConfiguration }} --output ${{ runner.temp }}
+    - name: Publish Artifact
+      if: success() || failure()
+      uses: actions/upload-artifact@v4.1.0
+      with:
+        name: drop
+        path: "\\\\my\\share\\${{ github.workflow }}\\${{ github.run_number }}"
